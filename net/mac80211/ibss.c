@@ -1847,12 +1847,18 @@ int ieee80211_ibss_join(struct ieee80211_sub_if_data *sdata,
 		  IEEE80211_HT_OP_MODE_PROTECTION_NONHT_MIXED
 		| IEEE80211_HT_PARAM_RIFS_MODE;
 
-	changed |= BSS_CHANGED_HT | BSS_CHANGED_MCAST_RATE;
-	ieee80211_bss_info_change_notify(sdata, changed);
-
 	sdata->smps_mode = IEEE80211_SMPS_OFF;
 	sdata->needed_rx_chains = local->rx_chains;
 	sdata->control_port_over_nl80211 = params->control_port_over_nl80211;
+
+	mutex_lock(&sdata->local->mtx);
+	ret = ieee80211_vif_use_channel(sdata, &params->chandef, chanmode);
+	if (ret)
+		return ret;
+	mutex_unlock(&sdata->local->mtx);
+
+	changed |= BSS_CHANGED_HT | BSS_CHANGED_MCAST_RATE;
+	ieee80211_bss_info_change_notify(sdata, changed);
 
 	ieee80211_queue_work(&local->hw, &sdata->work);
 
